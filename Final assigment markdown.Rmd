@@ -1,0 +1,213 @@
+---
+title: "Final assignment"
+author: "Marián Miklós"
+date: '2018 január 21 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## 1. Executive summary and exploratory data analysis
+In this analysis, I investigated data from schizophrenic patients. The patients completed the Wisconsin Card Sorting test (WCST), the Stop Signal task and the Raven Progressive Matrices task. The WCST is a test of frontal executive functions (mainly set shifting), the Stop signal task also taps executive functions, mainly behavioural inhibition and the Raven test is a test of fluid intelligence. The aim of the investigation was to shed light on the relationship between performance on the WCST and the Stop Signal task, and also to see whether scores on the WCST correlate to fluid intelligence measured by the Raven test. As a first step, I explored the dataset and described the characteristics of measured variables (missing values, distribution and outliers). Next, I investigated Hypothesis 1, according to which the two WCST subgroups (created by dividing standardized WCST scores by a median split) differ with regards to Raven IQ; more specifically, the higher scoring WCST group was hypothesized to have higher Raven IQ. This assumption was not corroborated, since the independent samples t-test conducted showed no difference between the two groups. According to Hypothesis 2, scores on the WCST correlate negatively with Stop Signal reaction time (the main measure of performance), that is, higher WCST scores would predict faster reaction times. This was also not confirmed by my analysis, as Pearson correlation and the linear regression model were not significant. 
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+#setwd(C:/Users/Marián/Documents/R)
+
+library(readxl)
+SCH_full <- read_excel("R_hazihoz_sch.xlsx")
+View(SCH_full)
+```
+
+## 2. Description of the dataset  
+
+Dataset structure
+```{r}
+str(SCH_full)
+```
+My dataset contains 47 observations and 5 variables:  
+JELIGE  
+WCST_score: numerical, standardized performance on the WCST  
+WCST_cat: numerical, 1 or 2, 1 meaning lower and 2 meaning higher category based on WCST median  
+SSRT: numerical,  Stop Signal reaction time, measure of performance in the Stop Signal task  
+Raven_IQ: numerical, measure of fluid intelligence  
+
+There are no missing values.
+
+Dataset summary
+```{r}
+summary(SCH_full)
+```
+
+### 2.1. Distribution and outliers of variable Raven_IQ  
+
+Visualizing Raven IQ data to spot outliers  
+```{r}
+boxplot(SCH_full$Raven_IQ,data=SCH_full, ylab ="RAven IQ", main= "Raven IQ")
+```
+
+As we can see, there is one outlier. 
+
+Discarding outlier
+```{r}
+bench <- 102.00 + 1.5*IQR(SCH_full$Raven_IQ)
+
+SCH_Raven <- subset(SCH_full, Raven_IQ<bench)
+boxplot(SCH_Raven$Raven_IQ, ylab= "Raven IQ", main="Outlier-free Raven IQ data")
+```
+
+Normality of outlier-free Raven_IQ data
+```{r}
+shapiro.test(SCH_Raven$Raven_IQ)
+```
+
+The Raven IQ data is normally distributed (p>0.05).
+
+Visualizing distribution of IQ with normal curve
+```{r}
+histogram <- hist(SCH_Raven$Raven_IQ, plot=TRUE, main="Raven IQ histogram", xlab="Raven IQ" )
+xfit<-seq(min(SCH_Raven$Raven_IQ),max(SCH_Raven$Raven_IQ),length=40) 
+yfit<-dnorm(xfit,mean=mean(SCH_Raven$Raven_IQ),sd=sd(SCH_Raven$Raven_IQ)) 
+yfit <- yfit*diff(histogram$mids[1:2])*length(SCH_Raven$Raven_IQ) 
+lines(xfit, yfit, col="blue", lwd=2)
+```
+
+Visualizing in a different way: density plot
+```{r}
+d <- density(SCH_Raven$Raven_IQ)  
+plot(d)
+```
+
+### 2.2. Distributions and outliers of variables WCST_score and SSRT  
+
+Visualizing WCST_score outliers in boxplot  
+```{r}
+boxplot(SCH_full$WCST_score, data=SCH_full, ylab="WCST score", main="WCST score")
+```
+
+There is one outlier in our WCST data.
+
+Visualizing SSRT outliers in boxplot  
+```{r}
+boxplot(SCH_full$SSRT, data=SCH_full, ylab="SSRT (msec)", main="SSRT")
+```
+
+There are two outliers in the SSRT data.
+
+Discarding both SSRT and WCST_score outliers
+```{r}
+summary(SCH_full)
+#bench for WCST_score outliers
+bench_WCST = 62.00 - 1.5*IQR(SCH_full$WCST_score)
+#benches for SSRT outliers
+bench_SSRT_upper= 383.1 + 1.5*IQR(SCH_full$SSRT)
+bench_SSRT_lower= 283.4 - 1.5*IQR(SCH_full$SSRT)
+
+SCH_SSRT <- subset(SCH_full, SSRT<bench_SSRT_upper & SSRT>bench_SSRT_lower & WCST_score>bench_WCST)
+boxplot(SCH_SSRT$WCST_score, ylab="WCST score", main = "Outlier-free WCST score data")
+boxplot(SCH_SSRT$SSRT, ylab= "SSRT (msec)", main = "Outlier-free SSRT data")
+```
+
+As we can see, the outliers are gone. 
+
+Normality of outlier-free WCST_score data
+```{r}
+shapiro.test(SCH_SSRT$WCST_score)
+```
+Our WCST_score data is normally distributed (p>0.05).
+
+Visualizing distribuion of WCST_score data with histogram and normal curve
+```{r}
+histogram <- hist(SCH_SSRT$WCST_score, plot=TRUE, main="WCST_score histogram", xlab=" WCST score" )
+xfit<-seq(min(SCH_SSRT$WCST_score),max(SCH_SSRT$WCST_score),length=40) 
+yfit<-dnorm(xfit,mean=mean(SCH_SSRT$WCST_score),sd=sd(SCH_SSRT$WCST_score)) 
+yfit <- yfit*diff(histogram$mids[1:2])*length(SCH_SSRT$WCST_score) 
+lines(xfit, yfit, col="blue", lwd=2)
+```
+
+Normality of outlier-free SSRT data
+```{r}
+shapiro.test(SCH_SSRT$SSRT)
+```
+The SSRT data is also normally distributed (p>0.05).
+
+Visualizing distribuion of SSRT data with histogram and normal curve
+```{r}
+histogram <- hist(SCH_SSRT$SSRT, plot=TRUE, main="SSRT histogram", xlab="SSRT" )
+xfit<-seq(min(SCH_SSRT$SSRT),max(SCH_SSRT$SSRT),length=40) 
+yfit<-dnorm(xfit,mean=mean(SCH_SSRT$SSRT),sd=sd(SCH_SSRT$SSRT)) 
+yfit <- yfit*diff(histogram$mids[1:2])*length(SCH_SSRT$SSRT) 
+lines(xfit, yfit, col="blue", lwd=2)
+```
+
+## 3. Hypotheses and investigation  
+  
+Hypothesis  1: Subject in the higher performing WCST group will have higher Raven intelligence quotients compared to the lower performing WCST group.
+
+Hypothesis 2: There is a negative correlation between WCST scores (better executive functions) and SSRT (faster reaction times in the Stop signal paradigm).
+
+
+### 3.1. Investigating Hypothesis 1 with an independent samples t-test
+
+#### 3.1.1. Checking for equal variances in the two WCST groups
+```{r}
+var.test(Raven_IQ ~ WCST_cat, data=SCH_full, alternative = "two.sided")
+```
+There is no significant difference between the variances of the two WCST groups (p>0.05), hence we can carry out the independent samples t-test (the normal distribution of Raven IQ was established earlier).
+
+#### 3.1.2. Conducting the independent samples t-test
+```{r}
+t.test(SCH_Raven$Raven_IQ~SCH_Raven$WCST_cat)
+```
+
+There is no significant difference between the two WCST groups with regards to Raven IQ score.
+
+#### 3.1.3. Visualizing Raven IQ in the two WCST groups
+```{r}
+boxplot(Raven_IQ~WCST_cat,data=SCH_Raven, main="Raven IQ in the two subgroups", 
+        xlab="WCST groups", ylab="Raven IQ", varwidth=TRUE)
+```
+
+### 3.2. Investigating the relationship between WCST score and Stop Signal reaction times (SSRT) with Pearson correlation
+
+#### 3.2.1. Conducting the Pearson correlation test
+```{r}
+cor_res <- cor.test(SCH_SSRT$WCST_score, SCH_SSRT$SSRT, method= "pearson")
+cor_res
+```
+
+There is no significant correlation between WCST scores and SSRT (p>0.05).
+
+#### 3.2.2. Visualizing the relationship between WCST scores and SSRT
+```{r}
+# Linear model
+plot(SSRT ~ WCST_score, SCH_full, main="Linear regression")
+regrline <- lm(SSRT ~ WCST_score, SCH_SSRT)
+abline(regrline, lwd=3, col='red')
+summary(regrline)
+
+SCH_SSRT$predicted <- predict(regrline)   # The predicted values
+SCH_SSRT$residuals <- residuals(regrline) # The residual values
+# Look at the actual, predicted, and residual values
+SCH_SSRT %>% select(SSRT, predicted, residuals) %>% head()
+#ggplot(SCH_SSRT, aes(x = WCST_score, y = SSRT)) + 
+  #geom_point()  # Plot the actual points
+#ggplot(SCH_SSRT, aes(x = WCST_score, y = SSRT)) +
+  #geom_point() +
+  #geom_point(aes(y = predicted), shape = 1)  # Add the predicted values
+#connect the actual data points with their corresponding predicted value:
+ggplot(SCH_SSRT, aes(x = WCST_score, y = SSRT)) +
+  geom_segment(aes(xend = WCST_score, yend = predicted)) +
+  geom_point() +
+  geom_point(aes(y = predicted), shape = 1)
+```
+
+Our linear model proves to be non-significant and looking at the residuals, a poor fit. 
+
+## 4. Conclusion
+
+In conclusion, neither of the hypotheses were confirmed. There was no difference between the two executive function-based subgroups with regards to fluid intelligence, and I did not find a correlation between set shifting ability (as measured by the WCST) and behavioural inhibition (as measured by the stop singla task). This could be a result of the relatively small sample size, or the fact that we investigated and compared schizophrenic patients to each other for the lack of a control group.
