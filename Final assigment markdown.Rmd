@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## 1. Executive summary and exploratory data analysis
 In this analysis, I investigated data from schizophrenic patients. The patients completed the Wisconsin Card Sorting test (WCST), the Stop Signal task and the Raven Progressive Matrices task. The WCST is a test of frontal executive functions (mainly set shifting), the Stop signal task also taps executive functions, mainly behavioural inhibition and the Raven test is a test of fluid intelligence. The aim of the investigation was to shed light on the relationship between performance on the WCST and the Stop Signal task, and also to see whether scores on the WCST correlate to fluid intelligence measured by the Raven test. As a first step, I explored the dataset and described the characteristics of measured variables (missing values, distribution and outliers). Next, I investigated Hypothesis 1, according to which the two WCST subgroups (created by dividing standardized WCST scores by a median split) differ with regards to Raven IQ; more specifically, the higher scoring WCST group was hypothesized to have higher Raven IQ. This assumption was not corroborated, since the independent samples t-test conducted showed no difference between the two groups. According to Hypothesis 2, scores on the WCST correlate negatively with Stop Signal reaction time (the main measure of performance), that is, higher WCST scores would predict faster reaction times. This was also not confirmed by my analysis, as Pearson correlation and the linear regression model were not significant. 
 
-```{r}
+```{r, echo=FALSE}
 library(tidyverse)
 library(dplyr)
 library(ggplot2)
